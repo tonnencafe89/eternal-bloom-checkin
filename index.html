@@ -2,51 +2,72 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport"
+content="width=device-width, initial-scale=1">
+
 <title>Eternal Bloom Check-in</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
+  padding: 20px;
   font-family: Arial, sans-serif;
   background: #f8f3f5;
-  text-align: center;
-  padding: 20px;
-  color: #55434b;
+  color: #55444d;
 }
 
 .container {
-  max-width: 420px;
+  max-width: 480px;
   margin: auto;
   background: white;
-  padding: 25px;
+  padding: 24px;
   border-radius: 20px;
-  box-shadow: 0 4px 15px #00000010;
+  box-shadow: 0 4px 18px rgba(0,0,0,.08);
 }
 
 h1 {
-  color: #a76d87;
-  font-size: 27px;
+  text-align: center;
+  color: #a66b83;
+  margin-bottom: 5px;
 }
 
-input, button {
+.subtitle {
+  text-align: center;
+  font-size: 13px;
+  margin-bottom: 25px;
+  color: #927d87;
+}
+
+label {
+  display: block;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+input {
   width: 100%;
-  box-sizing: border-box;
-  padding: 14px;
-  margin: 10px 0;
+  padding: 13px;
+  margin-top: 7px;
+  border: 1px solid #e5d4dc;
   border-radius: 10px;
   font-size: 16px;
 }
 
-input {
-  border: 1px solid #ddc8d2;
-}
-
 button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 15px;
   border: none;
-  background: #b77f99;
+  border-radius: 10px;
+  background: #b77d96;
   color: white;
+  font-size: 16px;
   cursor: pointer;
 }
 
@@ -56,33 +77,58 @@ button:disabled {
 
 #reader {
   width: 100%;
-  margin: 15px auto;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 12px;
 }
 
-#result {
-  margin-top: 20px;
-  padding: 15px;
-  border-radius: 12px;
+.result {
   display: none;
-  line-height: 1.8;
-  overflow-wrap: anywhere;
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #faf4f7;
 }
 
 .success {
-  display: block !important;
-  background: #e5f5e9;
-  color: #267442;
+  color: #27845b;
+  font-weight: bold;
+  font-size: 20px;
+  text-align: center;
 }
 
 .error {
-  display: block !important;
-  background: #fce8e8;
-  color: #a33333;
+  color: #c14e61;
+  text-align: center;
+  font-weight: bold;
 }
 
-.small {
-  font-size: 12px;
-  color: #99838e;
+.info {
+  margin-top: 15px;
+  line-height: 1.9;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  background: #e2f4e9;
+  color: #27845b;
+  padding: 10px;
+  text-align: center;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-weight: bold;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.footer {
+  text-align: center;
+  font-size: 11px;
+  color: #ad9ca4;
+  margin-top: 25px;
 }
 </style>
 </head>
@@ -91,226 +137,378 @@ button:disabled {
 
 <div class="container">
 
-<h1>🌷 Eternal Bloom</h1>
-<p>STAFF CHECK-IN SYSTEM</p>
+<h1>ETERNAL BLOOM</h1>
 
+<div class="subtitle">
+OFFICIAL EVENT CHECK-IN
+</div>
+
+<label>Staff PIN</label>
 <input
   type="password"
   id="pin"
-  placeholder="Enter Staff PIN"
+  placeholder="Enter staff PIN"
 >
 
 <button id="startBtn" onclick="startScanner()">
-  OPEN CAMERA
+START SCANNER
 </button>
 
 <div id="reader"></div>
 
-<div id="result"></div>
+<div id="message"></div>
 
-<button id="againBtn" onclick="scanAgain()" style="display:none">
-  SCAN NEXT GUEST
+<div id="result" class="result">
+
+<div id="resultTitle"></div>
+
+<div class="info" id="details"></div>
+
+<div id="statusBox"></div>
+
+</div>
+
+<button
+  id="againBtn"
+  class="hidden"
+  onclick="scanAgain()">
+SCAN NEXT GUEST
 </button>
 
-<p class="small">Eternal Bloom · Guest Registration</p>
+<div class="footer">
+ETERNAL BLOOM CHECK-IN SYSTEM
+</div>
 
 </div>
 
 <script>
 
+// ===================================
+// CONFIGURATION
+// ===================================
+
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwGYu0OdJGtVKh6f85un6RGyFQiedlB9cFBq0h1oZeyCxnjmyOyV0Z89egqazRlyqvEMA/exec";
 
 let scanner = null;
-let scanning = false;
 let busy = false;
+let scanning = false;
 
-function showResult(data) {
-
-  const box = document.getElementById("result");
-
-  if (data.success) {
-
-    box.className = "success";
-
-    box.innerHTML = `
-      <h2>✓ CHECK-IN SUCCESSFUL</h2>
-      <b>Name:</b> ${escapeHTML(data.name)}<br>
-      <b>Round:</b> ${escapeHTML(data.round)}<br>
-      <b>Menu:</b> ${escapeHTML(data.menu)}<br>
-      <b>ID:</b> ${escapeHTML(data.id)}<br>
-      <b>Check-in Date & Time:</b> ${escapeHTML(data.time)}
-    `;
-
-  } else {
-
-    box.className = "error";
-
-    box.innerHTML = `
-      <h3>⚠ ${escapeHTML(data.message || "CHECK-IN FAILED")}</h3>
-    `;
-
-  }
-
-  document.getElementById("againBtn").style.display = "block";
-}
-
-function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  })[char]);
-}
-
-function checkInGuest(registrationId, pin) {
-
-  const callbackName =
-    "ebCallback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
-
-  return new Promise((resolve, reject) => {
-
-    const script = document.createElement("script");
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Connection timeout"));
-    }, 20000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      script.remove();
-    }
-
-    window[callbackName] = function(data) {
-      cleanup();
-      resolve(data);
-    };
-
-    script.onerror = function() {
-      cleanup();
-      reject(new Error("Cannot connect to Google Apps Script"));
-    };
-
-    const params = new URLSearchParams({
-      action: "checkin",
-      registrationId: registrationId,
-      pin: pin,
-      callback: callbackName
-    });
-
-    script.src = GAS_URL + "?" + params.toString();
-
-    document.body.appendChild(script);
-
-  });
-
-}
+// ===================================
+// START CAMERA
+// ===================================
 
 async function startScanner() {
 
   const pin = document.getElementById("pin").value.trim();
 
   if (!pin) {
-    alert("Please enter Staff PIN");
+    showMessage("Please enter Staff PIN", true);
     return;
   }
 
-  document.getElementById("startBtn").disabled = true;
+  document.getElementById("message").innerHTML = "";
+
+  document.getElementById("result").style.display = "none";
+
+  document.getElementById("againBtn").classList.add("hidden");
+
+  if (scanner) {
+    try {
+      await scanner.clear();
+    } catch(e) {}
+  }
+
+  scanner = new Html5Qrcode("reader");
 
   try {
 
-    if (!scanner) {
-      scanner = new Html5Qrcode("reader");
-    }
-
-    const cameras = await Html5Qrcode.getCameras();
-
-    if (!cameras || cameras.length === 0) {
-      throw new Error("No camera found");
-    }
-
-    const backCamera = cameras.find(camera =>
-      /back|rear|environment/i.test(camera.label)
-    );
-
-    const cameraId = backCamera
-      ? backCamera.id
-      : cameras[cameras.length - 1].id;
-
     await scanner.start(
-      cameraId,
+      { facingMode: "environment" },
       {
         fps: 10,
         qrbox: { width: 250, height: 250 }
       },
-
-      async (decodedText) => {
-
-        if (!scanning || busy) return;
-
-        scanning = false;
-        busy = true;
-
-        try {
-
-          await scanner.pause(true);
-
-          const result = await checkInGuest(
-            decodedText.trim(),
-            pin
-          );
-
-          showResult(result);
-
-        } catch(error) {
-
-          showResult({
-            success: false,
-            message: error.message
-          });
-
-        }
-
-      },
-
-      () => {}
-
+      onScanSuccess
     );
 
     scanning = true;
 
-    document.getElementById("startBtn").style.display = "none";
+    document.getElementById("startBtn").disabled = true;
 
   } catch(error) {
 
-    alert("ไม่สามารถเปิดกล้องได้: " + error);
+    showMessage(
+      "Cannot access camera. Please allow camera permission.",
+      true
+    );
 
-    document.getElementById("startBtn").disabled = false;
+  }
+}
+
+// ===================================
+// QR SCAN
+// ===================================
+
+async function onScanSuccess(decodedText) {
+
+  if (busy) return;
+
+  busy = true;
+
+  try {
+    await scanner.pause(true);
+  } catch(e) {}
+
+  checkInGuest(decodedText);
+
+}
+
+// ===================================
+// CONNECT GOOGLE APPS SCRIPT
+// ===================================
+
+function checkInGuest(registrationId) {
+
+  const pin = document.getElementById("pin").value.trim();
+
+  showMessage("Checking registration...", false);
+
+  const callbackName =
+    "ebCallback_" + Date.now() + "_" +
+    Math.floor(Math.random() * 10000);
+
+  const script = document.createElement("script");
+
+  let finished = false;
+
+  const timeout = setTimeout(() => {
+
+    finish();
+
+    showMessage(
+      "Connection timeout. Please try again.",
+      true
+    );
+
+    unlockScanner();
+
+  }, 25000);
+
+  function finish() {
+
+    if (finished) return;
+
+    finished = true;
+
+    clearTimeout(timeout);
+
+    delete window[callbackName];
+
+    script.remove();
+
+  }
+
+  window[callbackName] = function(response) {
+
+    finish();
+
+    handleResponse(response);
+
+  };
+
+  const params = new URLSearchParams({
+
+    action: "checkin",
+
+    registrationId: registrationId,
+
+    pin: pin,
+
+    callback: callbackName
+
+  });
+
+  script.src = GAS_URL + "?" + params.toString();
+
+  script.onerror = function() {
+
+    finish();
+
+    showMessage(
+      "Cannot connect to Google Apps Script.",
+      true
+    );
+
+    unlockScanner();
+
+  };
+
+  document.body.appendChild(script);
+
+}
+
+// ===================================
+// RESPONSE
+// ===================================
+
+function handleResponse(response) {
+
+  document.getElementById("message").innerHTML = "";
+
+  const result = document.getElementById("result");
+
+  result.style.display = "block";
+
+  if (!response || response.success !== true) {
+
+    document.getElementById("resultTitle").innerHTML =
+      '<div class="error">' +
+      (response?.message || "CHECK-IN FAILED") +
+      '</div>';
+
+    document.getElementById("details").innerHTML = "";
+
+    document.getElementById("statusBox").innerHTML = "";
+
+    document.getElementById("againBtn").classList.remove("hidden");
+
+    return;
+
+  }
+
+  const data = response.data || response;
+
+  const account =
+    data.account || data.name || data.email || "-";
+
+  const email = data.email || "-";
+
+  const round = data.round || "-";
+
+  const menu =
+    data.menu || data.specialSetMenu || "-";
+
+  const id =
+    data.registrationId || data.id || "-";
+
+  const checkinTime =
+    data.checkInTime ||
+    data.checkinTime ||
+    data.time ||
+    "-";
+
+  const status =
+    data.checkInStatus ||
+    data.status ||
+    "CHECKED IN";
+
+  document.getElementById("resultTitle").innerHTML =
+    '<div class="success">CHECK-IN SUCCESSFUL</div>';
+
+  document.getElementById("details").innerHTML = `
+
+    <b>Account:</b> ${escapeHTML(account)}<br>
+
+    <b>Email:</b> ${escapeHTML(email)}<br>
+
+    <b>Round:</b> ${escapeHTML(round)}<br>
+
+    <b>Special Set Menu:</b> ${escapeHTML(menu)}<br>
+
+    <b>Registration ID:</b> ${escapeHTML(id)}<br>
+
+    <b>Check-in Date & Time:</b>
+    ${escapeHTML(checkinTime)}
+
+  `;
+
+  document.getElementById("statusBox").innerHTML =
+
+    '<div class="status">' +
+    escapeHTML(status) +
+    '</div>';
+
+  document.getElementById("againBtn").classList.remove("hidden");
+
+}
+
+// ===================================
+// HTML SAFETY
+// ===================================
+
+function escapeHTML(value) {
+
+  return String(value).replace(/[&<>"']/g, function(char) {
+
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[char];
+
+  });
+
+}
+
+// ===================================
+// SCAN AGAIN
+// ===================================
+
+async function scanAgain() {
+
+  document.getElementById("result").style.display = "none";
+
+  document.getElementById("message").innerHTML = "";
+
+  busy = false;
+
+  try {
+
+    if (scanner && scanning) {
+
+      await scanner.resume();
+
+    } else {
+
+      startScanner();
+
+    }
+
+  } catch(e) {
+
+    startScanner();
 
   }
 
 }
 
-async function scanAgain() {
+// ===================================
+// MESSAGE
+// ===================================
 
-  document.getElementById("result").style.display = "none";
-  document.getElementById("result").className = "";
-  document.getElementById("againBtn").style.display = "none";
+function showMessage(message, isError) {
+
+  document.getElementById("message").innerHTML =
+
+    '<div class="' +
+    (isError ? 'error' : '') +
+    '">' +
+    escapeHTML(message) +
+    '</div>';
+
+}
+
+// ===================================
+// UNLOCK
+// ===================================
+
+function unlockScanner() {
 
   busy = false;
-  scanning = true;
 
-  if (scanner) {
-    try {
-      await scanner.resume();
-    } catch(error) {
-      scanning = false;
-      alert("กรุณารีเฟรชเว็บไซต์แล้วเปิดกล้องใหม่");
-    }
-  }
+  document.getElementById("againBtn").classList.remove("hidden");
 
 }
 
