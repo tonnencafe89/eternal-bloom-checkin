@@ -363,7 +363,7 @@ function handleResponse(response) {
 
     document.getElementById("resultTitle").innerHTML =
       '<div class="error">' +
-      (response?.message || "CHECK-IN FAILED") +
+      escapeHTML(response?.message || "CHECK-IN FAILED") +
       '</div>';
 
     document.getElementById("details").innerHTML = "";
@@ -376,57 +376,28 @@ function handleResponse(response) {
 
   }
 
-  const data = response.data || response;
-
-  const account =
-    data.account || data.name || data.email || "-";
-
-  const email = data.email || "-";
-
-  const round = data.round || "-";
-
-  const menu =
-    data.menu || data.specialSetMenu || "-";
-
-  const id =
-    data.registrationId || data.id || "-";
-
-  const checkinTime =
-    data.checkInTime ||
-    data.checkinTime ||
-    data.time ||
-    "-";
-
-  const status =
-    data.checkInStatus ||
-    data.status ||
-    "CHECKED IN";
-
   document.getElementById("resultTitle").innerHTML =
     '<div class="success">CHECK-IN SUCCESSFUL</div>';
 
   document.getElementById("details").innerHTML = `
 
-    <b>Account:</b> ${escapeHTML(account)}<br>
+    <b>Name:</b> ${escapeHTML(response.name || "-")}<br>
 
-    <b>Email:</b> ${escapeHTML(email)}<br>
+    <b>Round:</b> ${escapeHTML(response.round || "-")}<br>
 
-    <b>Round:</b> ${escapeHTML(round)}<br>
+    <b>Menu:</b> ${escapeHTML(response.menu || "-")}<br>
 
-    <b>Special Set Menu:</b> ${escapeHTML(menu)}<br>
+    <b>Registration ID:</b> ${escapeHTML(response.id || "-")}<br>
 
-    <b>Registration ID:</b> ${escapeHTML(id)}<br>
+    <b>Event Date:</b> ${escapeHTML(response.eventDate || "-")}<br>
 
     <b>Check-in Date & Time:</b>
-    ${escapeHTML(checkinTime)}
+    ${escapeHTML(response.time || "-")}
 
   `;
 
   document.getElementById("statusBox").innerHTML =
-
-    '<div class="status">' +
-    escapeHTML(status) +
-    '</div>';
+    '<div class="status">CHECKED IN</div>';
 
   document.getElementById("againBtn").classList.remove("hidden");
 
